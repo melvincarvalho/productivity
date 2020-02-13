@@ -1,3 +1,3 @@
 #!/usr/bin/env bash
 
-xdotool windowactivate $(xdotool search "$1" | tail -1)
+xdotool windowactivate --sync $(xdotool search "$1" | tail -1)
