@@ -141,6 +141,11 @@ const TEMPLATE = `<!doctype html>
   }
   .wl-done-badge.done { background: #0ca30c; }
   .wl-done-badge.rejected { background: var(--muted); }
+  .wl-pin { margin-right: 6px; }
+  .wl-later {
+    margin-left: 6px; font-size: 11px; padding: 0 6px; border-radius: 4px;
+    background: var(--plane); border: 1px solid var(--border); color: var(--muted);
+  }
   .wl-note { font-size: 13px; color: var(--ink-2); margin-top: 3px; }
   .wl-note a { color: var(--accent); text-decoration: none; word-break: break-all; }
   .wl-note a:hover { text-decoration: underline; }
@@ -388,6 +393,13 @@ fetch('./melvincarvalho/magpie/worklist.json').then(function (r) {
     body.className = 'wl-body'
     var p = document.createElement('div')
     p.className = 'wl-pitch'
+    if (it.priority === 'pin') {
+      var pin = document.createElement('span')
+      pin.className = 'wl-pin'
+      pin.textContent = '\\uD83D\\uDCCC'
+      pin.title = 'pinned'
+      p.appendChild(pin)
+    }
     var k = document.createElement('span')
     k.className = 'wl-kind ' + (it.kind || '')
     k.textContent = it.kind || ''
@@ -405,6 +417,12 @@ fetch('./melvincarvalho/magpie/worklist.json').then(function (r) {
       st.className = 'wl-status'
       st.textContent = it.status === 'accepted' ? 'in flight' : it.status
       meta.appendChild(st)
+    }
+    if (it.priority === 'later') {
+      var lt = document.createElement('span')
+      lt.className = 'wl-later'
+      lt.textContent = 'later'
+      meta.appendChild(lt)
     }
     body.appendChild(p)
     body.appendChild(meta)
