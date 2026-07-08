@@ -97,6 +97,22 @@ const TEMPLATE = `<!doctype html>
     display: inline-block; width: 8px; height: 8px; border-radius: 50%;
     margin-right: 10px; vertical-align: 1px;
   }
+  .wl-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .wl-head h2 { font-size: 15px; font-weight: 600; }
+  .wl-logo { font-size: 15px; }
+  .wl-resolved { font-size: 12px; color: var(--muted); }
+  .wl-tabs { display: flex; gap: 4px; margin: 12px 0 4px; border-bottom: 1px solid var(--grid); }
+  .wl-tab {
+    background: none; border: none; border-bottom: 2px solid transparent;
+    padding: 7px 12px 9px; font: inherit; font-size: 14px; color: var(--ink-2);
+    cursor: pointer; margin-bottom: -1px;
+  }
+  .wl-tab:hover { color: var(--ink); }
+  .wl-tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); font-weight: 500; }
+  .wl-n {
+    font-size: 11px; font-variant-numeric: tabular-nums; color: var(--muted);
+    background: var(--plane); border: 1px solid var(--border); border-radius: 20px; padding: 0 6px; margin-left: 2px;
+  }
   #wl-items li { display: flex; gap: 10px; padding: 8px 0; border-top: 1px solid var(--grid); align-items: baseline; }
   #wl-items li:first-child { border-top: none; }
   .wl-score {
@@ -162,10 +178,18 @@ const TEMPLATE = `<!doctype html>
   </div>
 
   <div class="card" id="worklist" hidden style="margin-top:12px">
-    <h2 style="font-size:13px;font-weight:500;color:var(--ink-2)">
-      Worklist <span style="color:var(--muted);font-weight:400">&middot; magpie survey <span id="wl-date"></span></span>
-    </h2>
-    <ol id="wl-items" style="list-style:none;margin-top:10px"></ol>
+    <div class="wl-head">
+      <h2>
+        <span class="wl-logo">&#128038;</span> magpie
+        <span style="color:var(--muted);font-weight:400">&middot; survey <span id="wl-date"></span></span>
+      </h2>
+      <span id="wl-resolved" class="wl-resolved"></span>
+    </div>
+    <div class="wl-tabs" role="tablist">
+      <button class="wl-tab" role="tab" data-tab="worklist" aria-selected="true">Worklist <span class="wl-n" id="wl-n-worklist"></span></button>
+      <button class="wl-tab" role="tab" data-tab="all" aria-selected="false">All <span class="wl-n" id="wl-n-all"></span></button>
+    </div>
+    <ol id="wl-items" style="list-style:none"></ol>
   </div>
 
   <div class="controls">
@@ -330,12 +354,26 @@ fetch('./melvincarvalho/magpie/worklist.json').then(function (r) {
 }).then(function (wl) {
   if (!wl || !wl.items || !wl.items.length) return
   document.getElementById('wl-date').textContent = (wl.generated || '').slice(0, 10)
+  var headline = wl.headline || 12
+  var all = wl.items
+  var top = all.slice(0, headline)
+  document.getElementById('wl-n-worklist').textContent = top.length
+  document.getElementById('wl-n-all').textContent = all.length
+  var rv = wl.resolved || {}
+  var parts = []
+  if (rv.done) parts.push(rv.done + ' done')
+  if (rv.accepted) parts.push(rv.accepted + ' in flight')
+  if (rv.rejected) parts.push(rv.rejected + ' rejected')
+  document.getElementById('wl-resolved').textContent =
+    parts.join('  \\u00b7  ') + (parts.length ? '  \\u00b7  ' : '') + (wl.total || all.length) + ' surveyed'
+
   var ol = document.getElementById('wl-items')
-  wl.items.forEach(function (it) {
+  function row (it, rank) {
     var li = document.createElement('li')
     var sc = document.createElement('span')
     sc.className = 'wl-score'
     sc.textContent = it.score
+    sc.title = 'rank #' + rank + (it.confidence ? '  \\u00b7  confidence ' + it.confidence + '/5' : '')
     var body = document.createElement('div')
     body.className = 'wl-body'
     var p = document.createElement('div')
@@ -362,8 +400,21 @@ fetch('./melvincarvalho/magpie/worklist.json').then(function (r) {
     body.appendChild(meta)
     li.appendChild(sc)
     li.appendChild(body)
-    ol.appendChild(li)
+    return li
+  }
+  function render (which) {
+    ol.textContent = ''
+    var list = which === 'all' ? all : top
+    list.forEach(function (it, i) { ol.appendChild(row(it, i + 1)) })
+  }
+  var tabs = document.querySelectorAll('.wl-tab')
+  tabs.forEach(function (t) {
+    t.addEventListener('click', function () {
+      tabs.forEach(function (x) { x.setAttribute('aria-selected', String(x === t)) })
+      render(t.dataset.tab)
+    })
   })
+  render('worklist')
   document.getElementById('worklist').hidden = false
 }).catch(function () {})
 </script>
