@@ -2,6 +2,9 @@
 
 Various tools to increase productivity.
 
+New here? Read [SKILL.md](SKILL.md) — it's the map to the whole system
+(mirror → server → dashboard → magpie surveys) and the gotchas we've hit.
+
 ## scripts/gh-sync.sh
 
 Mirror your GitHub world (owned repos + all orgs you belong to) into
