@@ -143,6 +143,25 @@ for entry in "${REPOS[@]}"; do
   dest="$ROOT/$owner/$name"
 
   if [[ -d $dest ]]; then
+    # An empty clone (no commits) is either a genuinely empty remote or a
+    # clone made before the repo's first push. Try to fetch content; if the
+    # remote has a default branch now, check it out (repair). If the remote
+    # is still empty there is nothing to do — it is not a failed sync.
+    if [[ -d $dest/.git ]] && ! git -C "$dest" rev-parse HEAD >/dev/null 2>&1; then
+      if [[ $DRY -eq 1 ]]; then skipped=$((skipped + 1)); continue; fi
+      git -C "$dest" fetch --quiet origin 2>/dev/null || true
+      head=$(git -C "$dest" remote show origin 2>/dev/null | sed -n 's/.*HEAD branch: //p')
+      if [[ -n $head && $head != '(unknown)' ]] && git -C "$dest" checkout --quiet "$head" 2>/dev/null; then
+        echo "repair  $full (empty clone -> $head)"
+        restore_mtimes "$dest"
+        [[ $pushed != - ]] && touch -d "$pushed" "$dest" || true
+        updated=$((updated + 1))
+      else
+        skipped=$((skipped + 1)) # genuinely empty remote; leave as-is
+      fi
+      sleep "$DELAY"
+      continue
+    fi
     if [[ $UPDATE -eq 0 ]]; then
       skipped=$((skipped + 1))
       continue

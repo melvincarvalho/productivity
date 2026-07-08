@@ -364,6 +364,7 @@ fetch('./melvincarvalho/magpie/worklist.json').then(function (r) {
 const root = process.argv[2] || path.join(os.homedir(), 'remote', 'github.com')
 
 const repos = []
+let empty = 0
 for (const owner of fs.readdirSync(root, { withFileTypes: true })) {
   if (!owner.isDirectory() || owner.name.startsWith('.')) continue
   const ownerDir = path.join(root, owner.name)
@@ -371,6 +372,9 @@ for (const owner of fs.readdirSync(root, { withFileTypes: true })) {
     if (!entry.isDirectory() || entry.name.startsWith('.')) continue
     const repoDir = path.join(ownerDir, entry.name)
     if (!fs.existsSync(path.join(repoDir, '.git'))) continue
+    // Skip empty clones (working tree is nothing but .git) — a genuinely
+    // empty upstream repo. Not browseable, not workable, pure dashboard noise.
+    if (fs.readdirSync(repoDir).every(f => f === '.git')) { empty++; continue }
     const t = Math.floor(fs.statSync(repoDir).mtimeMs / 1000)
     repos.push([owner.name, entry.name, t])
   }
@@ -395,4 +399,5 @@ const page = TEMPLATE
 
 const out = path.join(root, 'index.html')
 fs.writeFileSync(out, page)
-console.log('wrote ' + out + ' — ' + repos.length + ' repos, ' + owners + ' owners')
+console.log('wrote ' + out + ' — ' + repos.length + ' repos, ' + owners + ' owners' +
+  (empty ? ' (' + empty + ' empty clones skipped)' : ''))
