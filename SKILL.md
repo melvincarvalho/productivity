@@ -49,6 +49,13 @@ writes into the served dir; `--read-only` rejects writes; `--git` enables
 authoritative spec for schemas, scoring, the ledger, and the hard rules.
 Read it before running a survey.
 
+**The write sidecar** — `magpie-serve.mjs` under pm2, app name `magpie-serve`,
+bound to `127.0.0.1:5446`. The mirror server is read-only, so this tiny
+localhost-only endpoint is the ONLY writer of `decisions.json`: it appends one
+entry (append-only) and reruns `refresh-worklist.mjs`. The dashboard's
+pin/unpin buttons POST to it; they only appear when `/health` is reachable, so
+LAN viewers get a clean read-only view. `pm2 save` persists it.
+
 ## Hard-won facts (don't rediscover these)
 
 - **jss returns 403 for any dotfile path** ("Dotfile access is not allowed").

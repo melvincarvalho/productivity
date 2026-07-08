@@ -142,6 +142,14 @@ const TEMPLATE = `<!doctype html>
   .wl-done-badge.done { background: #0ca30c; }
   .wl-done-badge.rejected { background: var(--muted); }
   .wl-pin { margin-right: 6px; }
+  .wl-pinbtn {
+    flex: none; align-self: center; margin-left: 8px; background: none;
+    border: 1px solid var(--border); border-radius: 6px; padding: 2px 7px;
+    cursor: pointer; font-size: 13px; opacity: 0.45; filter: grayscale(1);
+  }
+  .wl-pinbtn:hover { opacity: 0.9; filter: none; }
+  .wl-pinbtn.on { opacity: 1; filter: none; border-color: var(--accent); }
+  .wl-pinbtn:disabled { opacity: 0.3; cursor: default; }
   .wl-later {
     margin-left: 6px; font-size: 11px; padding: 0 6px; border-radius: 4px;
     background: var(--plane); border: 1px solid var(--border); color: var(--muted);
@@ -368,19 +376,38 @@ fetch('./melvincarvalho/magpie/worklist.json').then(function (r) {
   return r.ok ? r.json() : null
 }).then(function (wl) {
   if (!wl || !wl.items || !wl.items.length) return
-  document.getElementById('wl-date').textContent = (wl.generated || '').slice(0, 10)
-  var headline = wl.headline || 12
-  var all = wl.items
-  var top = all.slice(0, headline)
-  document.getElementById('wl-n-worklist').textContent = top.length
-  document.getElementById('wl-n-all').textContent = all.length
-  var rv = wl.resolved || {}
-  var parts = []
-  if (rv.done) parts.push(rv.done + ' done')
-  if (rv.accepted) parts.push(rv.accepted + ' in flight')
-  if (rv.rejected) parts.push(rv.rejected + ' rejected')
-  document.getElementById('wl-resolved').textContent =
-    parts.join('  \\u00b7  ') + (parts.length ? '  \\u00b7  ' : '') + (wl.total || all.length) + ' surveyed'
+  var SIDECAR = location.protocol + '//' + location.hostname + ':5446'
+  var canWrite = false
+  var all = [], top = []
+  function applyData (w) {
+    document.getElementById('wl-date').textContent = (w.generated || '').slice(0, 10)
+    var headline = w.headline || 12
+    all = w.items
+    top = all.slice(0, headline)
+    document.getElementById('wl-n-worklist').textContent = top.length
+    document.getElementById('wl-n-all').textContent = all.length
+    var rv = w.resolved || {}
+    var parts = []
+    if (rv.done) parts.push(rv.done + ' done')
+    if (rv.accepted) parts.push(rv.accepted + ' in flight')
+    if (rv.rejected) parts.push(rv.rejected + ' rejected')
+    document.getElementById('wl-resolved').textContent =
+      parts.join('  \\u00b7  ') + (parts.length ? '  \\u00b7  ' : '') + (w.total || all.length) + ' surveyed'
+  }
+  applyData(wl)
+
+  // pin/unpin writes go to the localhost-only sidecar, which appends to
+  // decisions.json and returns the regenerated worklist.
+  function writeDecision (payload, btn) {
+    if (btn) btn.disabled = true
+    fetch(SIDECAR + '/decision', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+    }).then(function (r) { return r.ok ? r.json() : Promise.reject() }).then(function (w) {
+      applyData(w)
+      var active = document.querySelector('.wl-tab[aria-selected="true"]')
+      render(active ? active.dataset.tab : 'worklist')
+    }).catch(function () { if (btn) { btn.disabled = false; btn.textContent = '!' } })
+  }
 
   var ol = document.getElementById('wl-items')
   function row (it, rank) {
@@ -393,7 +420,7 @@ fetch('./melvincarvalho/magpie/worklist.json').then(function (r) {
     body.className = 'wl-body'
     var p = document.createElement('div')
     p.className = 'wl-pitch'
-    if (it.priority === 'pin') {
+    if (it.priority === 'pin' && !canWrite) {
       var pin = document.createElement('span')
       pin.className = 'wl-pin'
       pin.textContent = '\\uD83D\\uDCCC'
@@ -428,6 +455,16 @@ fetch('./melvincarvalho/magpie/worklist.json').then(function (r) {
     body.appendChild(meta)
     li.appendChild(sc)
     li.appendChild(body)
+    if (canWrite) {
+      var toggle = document.createElement('button')
+      toggle.className = 'wl-pinbtn' + (it.priority === 'pin' ? ' on' : '')
+      toggle.textContent = '\\uD83D\\uDCCC'
+      toggle.title = it.priority === 'pin' ? 'unpin' : 'pin to top'
+      toggle.addEventListener('click', function () {
+        writeDecision({ id: it.id, repo: it.repo, priority: it.priority === 'pin' ? 'normal' : 'pin' }, toggle)
+      })
+      li.appendChild(toggle)
+    }
     return li
   }
   function doneRow (d) {
@@ -503,6 +540,14 @@ fetch('./melvincarvalho/magpie/worklist.json').then(function (r) {
   })
   select((location.hash || '').replace('#', '') || 'worklist')
   document.getElementById('worklist').hidden = false
+
+  // If the localhost write sidecar is reachable, enable pin/unpin buttons.
+  fetch(SIDECAR + '/health').then(function (r) { return r.ok }).then(function (ok) {
+    if (!ok) return
+    canWrite = true
+    var active = document.querySelector('.wl-tab[aria-selected="true"]')
+    if (active && active.dataset.tab !== 'done') render(active.dataset.tab)
+  }).catch(function () {})
 
   // Done tab reads decisions.json directly: fold to the latest verdict per
   // finding, keep terminal ones (done/rejected), newest first.
