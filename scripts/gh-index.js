@@ -135,6 +135,15 @@ const TEMPLATE = `<!doctype html>
     margin-left: 6px; font-size: 11px; padding: 0 6px; border-radius: 4px;
     background: var(--b2); color: #fff;
   }
+  .wl-done-badge {
+    flex: none; min-width: 60px; text-align: center; font-size: 11px;
+    padding: 2px 0; border-radius: 6px; color: #fff; text-transform: capitalize;
+  }
+  .wl-done-badge.done { background: #0ca30c; }
+  .wl-done-badge.rejected { background: var(--muted); }
+  .wl-note { font-size: 13px; color: var(--ink-2); margin-top: 3px; }
+  .wl-note a { color: var(--accent); text-decoration: none; word-break: break-all; }
+  .wl-note a:hover { text-decoration: underline; }
   .b0 { background: var(--b0); } .b1 { background: var(--b1); }
   .b2 { background: var(--b2); } .b3 { background: var(--b3); }
   .b4 { background: var(--b4); }
@@ -188,6 +197,7 @@ const TEMPLATE = `<!doctype html>
     <div class="wl-tabs" role="tablist">
       <button class="wl-tab" role="tab" data-tab="worklist" aria-selected="true">Worklist <span class="wl-n" id="wl-n-worklist"></span></button>
       <button class="wl-tab" role="tab" data-tab="all" aria-selected="false">All <span class="wl-n" id="wl-n-all"></span></button>
+      <button class="wl-tab" role="tab" data-tab="done" aria-selected="false">Done <span class="wl-n" id="wl-n-done"></span></button>
     </div>
     <ol id="wl-items" style="list-style:none"></ol>
   </div>
@@ -402,20 +412,94 @@ fetch('./melvincarvalho/magpie/worklist.json').then(function (r) {
     li.appendChild(body)
     return li
   }
+  function doneRow (d) {
+    var li = document.createElement('li')
+    var badge = document.createElement('span')
+    badge.className = 'wl-done-badge ' + (d.action || '')
+    badge.textContent = d.action || ''
+    var body = document.createElement('div')
+    body.className = 'wl-body'
+    var p = document.createElement('div')
+    p.className = 'wl-pitch'
+    p.appendChild(document.createTextNode(d.id || ''))
+    var meta = document.createElement('div')
+    meta.className = 'wl-meta'
+    if (d.repo) {
+      var a = document.createElement('a')
+      a.href = './' + d.repo + '/'
+      a.textContent = d.repo
+      meta.appendChild(a)
+    }
+    if (d.ts) meta.appendChild(document.createTextNode((d.repo ? '  \\u00b7  ' : '') + d.ts.slice(0, 10)))
+    body.appendChild(p)
+    body.appendChild(meta)
+    if (d.note) {
+      var note = document.createElement('div')
+      note.className = 'wl-note'
+      // linkify any URLs in the note (PR links etc.)
+      var re = /(https?:\\/\\/[^\\s)]+)/g, last = 0, m
+      while ((m = re.exec(d.note))) {
+        if (m.index > last) note.appendChild(document.createTextNode(d.note.slice(last, m.index)))
+        var link = document.createElement('a')
+        link.href = m[1]; link.textContent = m[1]; link.target = '_blank'; link.rel = 'noopener'
+        note.appendChild(link)
+        last = m.index + m[1].length
+      }
+      if (last < d.note.length) note.appendChild(document.createTextNode(d.note.slice(last)))
+      body.appendChild(note)
+    }
+    li.appendChild(badge)
+    li.appendChild(body)
+    return li
+  }
+  var doneList = []
   function render (which) {
     ol.textContent = ''
+    if (which === 'done') {
+      if (!doneList.length) {
+        var li = document.createElement('li')
+        li.style.color = 'var(--muted)'
+        li.textContent = 'No resolved items yet.'
+        ol.appendChild(li)
+        return
+      }
+      doneList.forEach(function (d) { ol.appendChild(doneRow(d)) })
+      return
+    }
     var list = which === 'all' ? all : top
     list.forEach(function (it, i) { ol.appendChild(row(it, i + 1)) })
   }
   var tabs = document.querySelectorAll('.wl-tab')
-  tabs.forEach(function (t) {
-    t.addEventListener('click', function () {
-      tabs.forEach(function (x) { x.setAttribute('aria-selected', String(x === t)) })
-      render(t.dataset.tab)
+  function select (name) {
+    var found = false
+    tabs.forEach(function (x) {
+      var on = x.dataset.tab === name
+      x.setAttribute('aria-selected', String(on))
+      if (on) found = true
     })
+    render(found ? name : 'worklist')
+    if (found && location.hash !== '#' + name) history.replaceState(null, '', '#' + name)
+  }
+  tabs.forEach(function (t) {
+    t.addEventListener('click', function () { select(t.dataset.tab) })
   })
-  render('worklist')
+  select((location.hash || '').replace('#', '') || 'worklist')
   document.getElementById('worklist').hidden = false
+
+  // Done tab reads decisions.json directly: fold to the latest verdict per
+  // finding, keep terminal ones (done/rejected), newest first.
+  fetch('./melvincarvalho/magpie/decisions.json').then(function (r) {
+    return r.ok ? r.json() : []
+  }).then(function (decisions) {
+    var latest = {}
+    decisions.forEach(function (d) { if (d && d.id) latest[d.id] = d })
+    doneList = Object.keys(latest).map(function (k) { return latest[k] })
+      .filter(function (d) { return d.action === 'done' || d.action === 'rejected' })
+      .sort(function (a, b) { return (b.ts || '') < (a.ts || '') ? -1 : 1 })
+    document.getElementById('wl-n-done').textContent = doneList.length
+    var active = document.querySelector('.wl-tab[aria-selected="true"]')
+    if (active && active.dataset.tab === 'done') render('done')
+  }).catch(function () {})
 }).catch(function () {})
 </script>
 </body>
