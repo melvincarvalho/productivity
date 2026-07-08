@@ -47,7 +47,9 @@ while [[ $# -gt 0 ]]; do
 done
 
 ME=$(gh api user --jq .login)
-JQ='.[] | [.full_name, (.pushed_at // ""), (.fork|tostring), (.archived|tostring)] | @tsv'
+# "-" placeholder for null pushed_at: an empty TSV field would be collapsed
+# by read (tab counts as IFS whitespace), shifting the columns.
+JQ='.[] | [.full_name, (.pushed_at // "-"), (.fork|tostring), (.archived|tostring)] | @tsv'
 
 # Emit "full_name<TAB>pushed_at<TAB>fork<TAB>archived" for one owner.
 list_owner() {
@@ -146,7 +148,7 @@ for entry in "${REPOS[@]}"; do
     [[ $DRY -eq 1 ]] && { updated=$((updated + 1)); continue; }
     if git -C "$dest" pull --ff-only --quiet 2>/dev/null; then
       restore_mtimes "$dest"
-      [[ -n $pushed ]] && touch -d "$pushed" "$dest"
+      [[ $pushed != - ]] && touch -d "$pushed" "$dest" || true
       updated=$((updated + 1))
     else
       echo "warn: could not fast-forward $full (dirty tree, diverged, or no upstream)" >&2
@@ -161,7 +163,7 @@ for entry in "${REPOS[@]}"; do
   mkdir -p "$ROOT/$owner"
   if gh repo clone "$full" "$dest" -- --quiet 2>/dev/null; then
     restore_mtimes "$dest"
-    [[ -n $pushed ]] && touch -d "$pushed" "$dest"
+    [[ $pushed != - ]] && touch -d "$pushed" "$dest" || true
     new=$((new + 1))
   else
     echo "warn: clone failed: $full" >&2
