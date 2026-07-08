@@ -73,7 +73,7 @@ Read it before running a survey.
 
 Full spec is in the magpie SKILL.md; the shape that worked:
 
-1. **Taste first.** Read every line of `melvincarvalho/magpie/decisions.jsonl`.
+1. **Taste first.** Read every entry of `melvincarvalho/magpie/decisions.json`.
    Rejected patterns must not resurface; accepted patterns score higher.
 2. **Inventory, no API.** Parse the `<script id="data">` JSON out of
    `~/remote/github.com/index.html` for the repo list + freshness.
@@ -97,7 +97,7 @@ Full spec is in the magpie SKILL.md; the shape that worked:
 - **The mirror is read-only ground truth.** Never modify a surveyed repo's
   working tree during a survey. The only write allowed into a surveyed repo is
   its own `.git/magpie.json` scratchpad, which is never committed.
-- **`decisions.jsonl` is append-only, forever.**
+- **`decisions.json` is append-only, forever.**
 
 ## Common commands
 
