@@ -97,6 +97,24 @@ const TEMPLATE = `<!doctype html>
     display: inline-block; width: 8px; height: 8px; border-radius: 50%;
     margin-right: 10px; vertical-align: 1px;
   }
+  #wl-items li { display: flex; gap: 10px; padding: 8px 0; border-top: 1px solid var(--grid); align-items: baseline; }
+  #wl-items li:first-child { border-top: none; }
+  .wl-score {
+    flex: none; min-width: 34px; text-align: center; font-size: 12px;
+    font-variant-numeric: tabular-nums; color: var(--ink-2);
+    border: 1px solid var(--border); border-radius: 6px; padding: 1px 0;
+  }
+  .wl-body { flex: 1; min-width: 0; }
+  .wl-pitch { font-size: 14px; }
+  .wl-meta { font-size: 12px; color: var(--muted); margin-top: 1px; }
+  .wl-meta a { color: var(--ink-2); text-decoration: none; }
+  .wl-meta a:hover { text-decoration: underline; color: var(--accent); }
+  .wl-kind {
+    display: inline-block; font-size: 11px; padding: 0 6px; border-radius: 4px;
+    background: var(--b4); color: var(--surface); margin-right: 6px;
+  }
+  .wl-kind.security { background: #d03b3b; color: #fff; }
+  .wl-kind.bug { background: var(--b2); color: #fff; }
   .b0 { background: var(--b0); } .b1 { background: var(--b1); }
   .b2 { background: var(--b2); } .b3 { background: var(--b3); }
   .b4 { background: var(--b4); }
@@ -137,6 +155,13 @@ const TEMPLATE = `<!doctype html>
     <h2>Last activity <span style="color:var(--muted);font-weight:400">&middot; click a bar to filter</span></h2>
     <div class="hist" id="hist"></div>
     <div class="hlabels" id="hlabels"></div>
+  </div>
+
+  <div class="card" id="worklist" hidden style="margin-top:12px">
+    <h2 style="font-size:13px;font-weight:500;color:var(--ink-2)">
+      Worklist <span style="color:var(--muted);font-weight:400">&middot; magpie survey <span id="wl-date"></span></span>
+    </h2>
+    <ol id="wl-items" style="list-style:none;margin-top:10px"></ol>
   </div>
 
   <div class="controls">
@@ -294,6 +319,43 @@ qEl.addEventListener('input', function () {
 document.getElementById('sort').addEventListener('change', function (e) { state.sort = e.target.value; apply() })
 moreEl.addEventListener('click', renderMore)
 apply()
+
+// magpie worklist — rendered if the ledger is present in the mirror
+fetch('./melvincarvalho/magpie/worklist.json').then(function (r) {
+  return r.ok ? r.json() : null
+}).then(function (wl) {
+  if (!wl || !wl.items || !wl.items.length) return
+  document.getElementById('wl-date').textContent = (wl.generated || '').slice(0, 10)
+  var ol = document.getElementById('wl-items')
+  wl.items.forEach(function (it) {
+    var li = document.createElement('li')
+    var sc = document.createElement('span')
+    sc.className = 'wl-score'
+    sc.textContent = it.score
+    var body = document.createElement('div')
+    body.className = 'wl-body'
+    var p = document.createElement('div')
+    p.className = 'wl-pitch'
+    var k = document.createElement('span')
+    k.className = 'wl-kind ' + (it.kind || '')
+    k.textContent = it.kind || ''
+    p.appendChild(k)
+    p.appendChild(document.createTextNode(it.pitch))
+    var meta = document.createElement('div')
+    meta.className = 'wl-meta'
+    var a = document.createElement('a')
+    a.href = './' + it.repo + '/'
+    a.textContent = it.repo
+    meta.appendChild(a)
+    meta.appendChild(document.createTextNode('  \\u00b7  ' + (it.effort || '') + ' effort'))
+    body.appendChild(p)
+    body.appendChild(meta)
+    li.appendChild(sc)
+    li.appendChild(body)
+    ol.appendChild(li)
+  })
+  document.getElementById('worklist').hidden = false
+}).catch(function () {})
 </script>
 </body>
 </html>
