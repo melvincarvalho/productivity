@@ -96,6 +96,15 @@ Full spec is in the magpie SKILL.md; the shape that worked:
    effort`. Write the full set to `surveys/YYYY-MM-DD.json` and the top ~12 to
    `worklist.json`. Commit + push the magpie repo; regenerate the dashboard.
 
+## Working the worklist (a pin is a work request)
+
+The human pins items in the dashboard; a **pin means "work on this next."** When
+asked to work the worklist, read `worklist.json`, take `priority: "pin"` items
+first (then by score), do the work on a branch as a PR, and record `accepted`
+(in flight) → `done` in `decisions.json`. Full spec in the magpie `SKILL.md`
+("Working the worklist"). This is the loop: pin in the UI → agent turns it into
+a PR → it shows up in the Done tab.
+
 ## Hard rules (from magpie — repeated because they matter)
 
 - **Propose, never execute.** Deletions, archivals, force-pushes are worklist
