@@ -14,6 +14,7 @@
 #   --delay N       seconds to sleep between clones/fetches (default 3)
 #   --no-forks      skip forked repos
 #   --no-archived   skip archived repos
+#   --no-private    skip private repos (e.g. when the mirror is served publicly)
 #   --root DIR      destination root (default ~/remote/github.com)
 #
 # Positional args restrict the sync:
@@ -28,7 +29,7 @@ set -euo pipefail
 ROOT="$HOME/remote/github.com"
 DELAY=3
 LIST_DELAY=0.2
-UPDATE=0 DRY=0 FORKS=1 ARCHIVED=1
+UPDATE=0 DRY=0 FORKS=1 ARCHIVED=1 PRIVATE=1
 FILTERS=()
 
 while [[ $# -gt 0 ]]; do
@@ -38,6 +39,7 @@ while [[ $# -gt 0 ]]; do
     --delay)       DELAY="$2"; shift ;;
     --no-forks)    FORKS=0 ;;
     --no-archived) ARCHIVED=0 ;;
+    --no-private)  PRIVATE=0 ;;
     --root)        ROOT="$2"; shift ;;
     -h|--help)     sed -n '2,25p' "$0" | cut -c3-; exit 0 ;;
     -*)            echo "unknown option: $1" >&2; exit 1 ;;
@@ -49,7 +51,7 @@ done
 ME=$(gh api user --jq .login)
 # "-" placeholder for null pushed_at: an empty TSV field would be collapsed
 # by read (tab counts as IFS whitespace), shifting the columns.
-JQ='.[] | [.full_name, (.pushed_at // "-"), (.fork|tostring), (.archived|tostring)] | @tsv'
+JQ='.[] | [.full_name, (.pushed_at // "-"), (.fork|tostring), (.archived|tostring), (.private|tostring)] | @tsv'
 
 # Emit "full_name<TAB>pushed_at<TAB>fork<TAB>archived" for one owner.
 list_owner() {
@@ -129,10 +131,11 @@ echo "found ${#REPOS[@]} repos"
 
 new=0 skipped=0 updated=0 failed=0 filtered=0
 for entry in "${REPOS[@]}"; do
-  IFS=$'\t' read -r full pushed fork archived <<<"$entry"
+  IFS=$'\t' read -r full pushed fork archived private <<<"$entry"
   [[ -z $full ]] && continue
   selected "$full" || continue
-  if [[ $FORKS -eq 0 && $fork == true ]] || [[ $ARCHIVED -eq 0 && $archived == true ]]; then
+  if [[ $FORKS -eq 0 && $fork == true ]] || [[ $ARCHIVED -eq 0 && $archived == true ]] ||
+     [[ $PRIVATE -eq 0 && $private == true ]]; then
     filtered=$((filtered + 1))
     continue
   fi

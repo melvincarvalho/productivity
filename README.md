@@ -8,6 +8,8 @@ Mirror your GitHub world (owned repos + all orgs you belong to) into
 `~/remote/github.com/<owner>/<repo>`.
 
 - Skips repos already on disk; `--update` fast-forwards them instead.
+- `--no-forks`, `--no-archived`, `--no-private` trim what gets mirrored
+  (use `--no-private` when the mirror is served publicly).
 - Throttled: sleeps between clones (`--delay N`, default 3s) to stay clear
   of rate limits. Interrupt and re-run any time — it resumes.
 - Restores timestamps: each file's mtime is set to its last commit,
