@@ -115,6 +115,10 @@ const TEMPLATE = `<!doctype html>
   }
   .wl-kind.security { background: #d03b3b; color: #fff; }
   .wl-kind.bug { background: var(--b2); color: #fff; }
+  .wl-status {
+    margin-left: 6px; font-size: 11px; padding: 0 6px; border-radius: 4px;
+    background: var(--b2); color: #fff;
+  }
   .b0 { background: var(--b0); } .b1 { background: var(--b1); }
   .b2 { background: var(--b2); } .b3 { background: var(--b3); }
   .b4 { background: var(--b4); }
@@ -348,6 +352,12 @@ fetch('./melvincarvalho/magpie/worklist.json').then(function (r) {
     a.textContent = it.repo
     meta.appendChild(a)
     meta.appendChild(document.createTextNode('  \\u00b7  ' + (it.effort || '') + ' effort'))
+    if (it.status && it.status !== 'open') {
+      var st = document.createElement('span')
+      st.className = 'wl-status'
+      st.textContent = it.status === 'accepted' ? 'in flight' : it.status
+      meta.appendChild(st)
+    }
     body.appendChild(p)
     body.appendChild(meta)
     li.appendChild(sc)
