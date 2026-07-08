@@ -21,6 +21,22 @@ Mirror your GitHub world (owned repos + all orgs you belong to) into
 
 Requires `gh` (authenticated), `git`, `python3`.
 
+## scripts/gh-index.js
+
+Generate a dashboard `index.html` at the root of the mirror — stat tiles,
+a last-activity histogram (click a bar to filter), and a searchable,
+sortable list of every repo with its last-push time. Self-contained
+static HTML (works from `file://`, jspod, or any web server), light and
+dark mode.
+
+```sh
+./scripts/gh-index.js                    # writes ~/remote/github.com/index.html
+./scripts/gh-index.js /path/to/mirror    # custom root
+```
+
+Timestamps come from the repo directory mtimes that `gh-sync.sh` sets,
+so run it after a sync. Requires `node`, no dependencies.
+
 ---
 
 Previous tools (a Freeplane daily-mindmap script and xdotool window-positioning
