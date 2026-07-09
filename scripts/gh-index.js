@@ -141,6 +141,13 @@ const TEMPLATE = `<!doctype html>
   }
   .wl-done-badge.done { background: #0ca30c; }
   .wl-done-badge.rejected { background: var(--muted); }
+  .wl-done-badge.safe-archive { background: #0ca30c; }
+  .wl-done-badge.needs-human { background: #c07a1a; }
+  .wl-github {
+    margin-left: 8px; font-size: 12px; color: var(--accent);
+    text-decoration: none; white-space: nowrap;
+  }
+  .wl-github:hover { text-decoration: underline; }
   .wl-pin { margin-right: 6px; }
   .wl-pinbtn {
     flex: none; align-self: center; margin-left: 8px; background: none;
@@ -210,6 +217,7 @@ const TEMPLATE = `<!doctype html>
     <div class="wl-tabs" role="tablist">
       <button class="wl-tab" role="tab" data-tab="worklist" aria-selected="true">Worklist <span class="wl-n" id="wl-n-worklist"></span></button>
       <button class="wl-tab" role="tab" data-tab="all" aria-selected="false">All <span class="wl-n" id="wl-n-all"></span></button>
+      <button class="wl-tab" role="tab" data-tab="archive" aria-selected="false">Archive <span class="wl-n" id="wl-n-archive"></span></button>
       <button class="wl-tab" role="tab" data-tab="done" aria-selected="false">Done <span class="wl-n" id="wl-n-done"></span></button>
     </div>
     <ol id="wl-items" style="list-style:none"></ol>
@@ -438,6 +446,12 @@ fetch('./melvincarvalho/magpie/worklist.json').then(function (r) {
     a.href = './' + it.repo + '/'
     a.textContent = it.repo
     meta.appendChild(a)
+    var gh = document.createElement('a')
+    gh.href = (it.seeAlso && it.seeAlso[1]) || ('https://github.com/' + it.repo)
+    gh.textContent = 'GitHub \\u2197'
+    gh.target = '_blank'; gh.rel = 'noopener'
+    gh.className = 'wl-github'
+    meta.appendChild(gh)
     meta.appendChild(document.createTextNode('  \\u00b7  ' + (it.effort || '') + ' effort'))
     if (it.status && it.status !== 'open') {
       var st = document.createElement('span')
@@ -507,7 +521,46 @@ fetch('./melvincarvalho/magpie/worklist.json').then(function (r) {
     li.appendChild(body)
     return li
   }
+  // Archive tab: one row per archive candidate from archive-review.json.
+  function archiveRow (it) {
+    var li = document.createElement('li')
+    var badge = document.createElement('span')
+    badge.className = 'wl-done-badge ' + (it.verdict || '').toLowerCase().replace(/[^a-z0-9]+/g, '-')
+    badge.textContent = it.verdict === 'NEEDS-HUMAN' ? 'review' : 'archive'
+    badge.title = it.verdict || ''
+    var body = document.createElement('div')
+    body.className = 'wl-body'
+    var p = document.createElement('div')
+    p.className = 'wl-pitch'
+    p.appendChild(document.createTextNode(it.whatItIs || it.repo))
+    var meta = document.createElement('div')
+    meta.className = 'wl-meta'
+    var a = document.createElement('a')
+    a.href = './' + it.repo + '/'
+    a.textContent = it.repo
+    meta.appendChild(a)
+    var gh = document.createElement('a')
+    gh.href = 'https://github.com/' + it.repo
+    gh.textContent = 'GitHub \\u2197'
+    gh.target = '_blank'; gh.rel = 'noopener'
+    gh.className = 'wl-github'
+    meta.appendChild(gh)
+    if (it.confidence) meta.appendChild(document.createTextNode('  \\u00b7  confidence ' + it.confidence + '/5'))
+    if (it.successor) meta.appendChild(document.createTextNode('  \\u00b7  \\u2192 ' + it.successor))
+    body.appendChild(p)
+    body.appendChild(meta)
+    if (it.reason) {
+      var note = document.createElement('div')
+      note.className = 'wl-note'
+      note.textContent = it.reason
+      body.appendChild(note)
+    }
+    li.appendChild(badge)
+    li.appendChild(body)
+    return li
+  }
   var doneList = []
+  var archiveList = []
   function render (which) {
     ol.textContent = ''
     if (which === 'done') {
@@ -519,6 +572,17 @@ fetch('./melvincarvalho/magpie/worklist.json').then(function (r) {
         return
       }
       doneList.forEach(function (d) { ol.appendChild(doneRow(d)) })
+      return
+    }
+    if (which === 'archive') {
+      if (!archiveList.length) {
+        var lia = document.createElement('li')
+        lia.style.color = 'var(--muted)'
+        lia.textContent = 'No archive candidates.'
+        ol.appendChild(lia)
+        return
+      }
+      archiveList.forEach(function (it) { ol.appendChild(archiveRow(it)) })
       return
     }
     var list = which === 'all' ? all : top
@@ -562,6 +626,22 @@ fetch('./melvincarvalho/magpie/worklist.json').then(function (r) {
     document.getElementById('wl-n-done').textContent = doneList.length
     var active = document.querySelector('.wl-tab[aria-selected="true"]')
     if (active && active.dataset.tab === 'done') render('done')
+  }).catch(function () {})
+
+  // Archive tab reads the archival-safety review: show archive candidates,
+  // confirmed-safe first, then any still needing a human decision.
+  fetch('./melvincarvalho/magpie/archive-review.json').then(function (r) {
+    return r.ok ? r.json() : null
+  }).then(function (rev) {
+    if (!rev || !rev.repos) return
+    var rank = { 'SAFE-ARCHIVE': 0, 'NEEDS-HUMAN': 1 }
+    archiveList = rev.repos.filter(function (x) { return x.verdict in rank })
+      .sort(function (a, b) {
+        return (rank[a.verdict] - rank[b.verdict]) || ((b.confidence || 0) - (a.confidence || 0))
+      })
+    document.getElementById('wl-n-archive').textContent = archiveList.length
+    var active = document.querySelector('.wl-tab[aria-selected="true"]')
+    if (active && active.dataset.tab === 'archive') render('archive')
   }).catch(function () {})
 }).catch(function () {})
 </script>
