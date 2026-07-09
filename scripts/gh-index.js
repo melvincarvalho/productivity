@@ -524,10 +524,12 @@ fetch('./melvincarvalho/magpie/worklist.json').then(function (r) {
   // Archive tab: one row per archive candidate from archive-review.json.
   function archiveRow (it) {
     var li = document.createElement('li')
+    var archived = it.status === 'archived'
+    if (archived) li.style.opacity = '0.55'
     var badge = document.createElement('span')
-    badge.className = 'wl-done-badge ' + (it.verdict || '').toLowerCase().replace(/[^a-z0-9]+/g, '-')
-    badge.textContent = it.verdict === 'NEEDS-HUMAN' ? 'review' : 'archive'
-    badge.title = it.verdict || ''
+    badge.className = 'wl-done-badge ' + (archived ? 'done' : (it.verdict || '').toLowerCase().replace(/[^a-z0-9]+/g, '-'))
+    badge.textContent = archived ? 'archived \\u2713' : (it.verdict === 'NEEDS-HUMAN' ? 'review' : 'archive')
+    badge.title = archived ? ('archived ' + (it.archivedAt || '')) : (it.verdict || '')
     var body = document.createElement('div')
     body.className = 'wl-body'
     var p = document.createElement('div')
@@ -637,9 +639,11 @@ fetch('./melvincarvalho/magpie/worklist.json').then(function (r) {
     var rank = { 'SAFE-ARCHIVE': 0, 'NEEDS-HUMAN': 1 }
     archiveList = rev.repos.filter(function (x) { return x.verdict in rank })
       .sort(function (a, b) {
-        return (rank[a.verdict] - rank[b.verdict]) || ((b.confidence || 0) - (a.confidence || 0))
+        var aa = a.status === 'archived' ? 1 : 0, bb = b.status === 'archived' ? 1 : 0
+        return (aa - bb) || (rank[a.verdict] - rank[b.verdict]) || ((b.confidence || 0) - (a.confidence || 0))
       })
-    document.getElementById('wl-n-archive').textContent = archiveList.length
+    var remaining = archiveList.filter(function (x) { return x.status !== 'archived' }).length
+    document.getElementById('wl-n-archive').textContent = remaining
     var active = document.querySelector('.wl-tab[aria-selected="true"]')
     if (active && active.dataset.tab === 'archive') render('archive')
   }).catch(function () {})
