@@ -194,7 +194,7 @@ const TEMPLATE = `<!doctype html>
   </header>
 
   <div class="tiles">
-    <div class="card tile"><div class="label">Repos</div><div class="value">__REPOS__</div></div>
+    <div class="card tile"><div class="label">Repos</div><div class="value">__REPOS__</div><div class="sub" style="font-size:11px;color:var(--muted);margin-top:3px">__REPOS_SUB__</div></div>
     <div class="card tile"><div class="label">Owners</div><div class="value">__OWNERS__</div></div>
     <div class="card tile"><div class="label">Touched this month</div><div class="value">__ACTIVE_MONTH__</div></div>
     <div class="card tile"><div class="label">Touched this year</div><div class="value">__ACTIVE_YEAR__</div></div>
@@ -669,17 +669,36 @@ for (const owner of fs.readdirSync(root, { withFileTypes: true })) {
 }
 repos.sort((a, b) => b[2] - a[2])
 
-const owners = new Set(repos.map(r => r[0])).size
+// Archived repos leave the active roster: they stay in the mirror and the
+// Archive tab, but drop out of the headline count so it ticks toward the goal.
+// Source of truth is magpie/archived.txt (one owner/repo per line; # comments).
+const archivedSet = new Set()
+try {
+  fs.readFileSync(path.join(root, 'melvincarvalho', 'magpie', 'archived.txt'), 'utf8')
+    .split('\n').map(s => s.trim())
+    .forEach(s => { if (s && s[0] !== '#') archivedSet.add(s) })
+} catch (e) {}
+const active = repos.filter(r => !archivedSet.has(r[0] + '/' + r[1]))
+const archivedCount = repos.length - active.length
+
+const GOAL = 1000
+const toGoal = active.length - GOAL
+const reposSub = (archivedCount ? archivedCount.toLocaleString('en') + ' archived' : 'goal ' + GOAL.toLocaleString('en'))
+  + (toGoal > 0 ? '  ·  ' + toGoal.toLocaleString('en') + ' to ' + GOAL.toLocaleString('en')
+               : '  ·  🎯 under ' + GOAL.toLocaleString('en') + '!')
+
+const owners = new Set(active.map(r => r[0])).size
 const now = Math.floor(Date.now() / 1000)
 const day = 86400
-const activeMonth = repos.filter(r => now - r[2] < 30 * day).length
-const activeYear = repos.filter(r => now - r[2] < 365 * day).length
+const activeMonth = active.filter(r => now - r[2] < 30 * day).length
+const activeYear = active.filter(r => now - r[2] < 365 * day).length
 const generated = new Date().toISOString().slice(0, 16).replace('T', ' ') + ' UTC'
-const json = JSON.stringify(repos).replace(/</g, '\\u003c')
+const json = JSON.stringify(active).replace(/</g, '\\u003c')
 
 const page = TEMPLATE
   .replace('__DATA__', () => json)
-  .replace(/__REPOS__/g, repos.length.toLocaleString('en'))
+  .replace(/__REPOS_SUB__/g, reposSub)
+  .replace(/__REPOS__/g, active.length.toLocaleString('en'))
   .replace(/__OWNERS__/g, String(owners))
   .replace(/__ACTIVE_MONTH__/g, activeMonth.toLocaleString('en'))
   .replace(/__ACTIVE_YEAR__/g, activeYear.toLocaleString('en'))
@@ -687,5 +706,5 @@ const page = TEMPLATE
 
 const out = path.join(root, 'index.html')
 fs.writeFileSync(out, page)
-console.log('wrote ' + out + ' — ' + repos.length + ' repos, ' + owners + ' owners' +
-  (empty ? ' (' + empty + ' empty clones skipped)' : ''))
+console.log('wrote ' + out + ' — ' + active.length + ' active repos, ' + owners + ' owners, ' +
+  archivedCount + ' archived' + (empty ? ', ' + empty + ' empty clones skipped' : ''))
