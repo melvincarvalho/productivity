@@ -26,7 +26,7 @@ const TEMPLATE = `<!doctype html>
 <style>
   :root {
     --plane: #f9f9f7; --surface: #fcfcfb;
-    --ink: #0b0b0b; --ink-2: #52514e; --muted: #898781;
+    --ink: #0b0b0b; --ink-2: #3f3e3b; --muted: #6b6a65;
     --grid: #e1e0d9; --baseline: #c3c2b7;
     --border: rgba(11,11,11,0.10); --accent: #2a78d6;
     --b0: #104281; --b1: #1c5cab; --b2: #2a78d6; --b3: #5598e7; --b4: #86b6ef;
@@ -43,26 +43,33 @@ const TEMPLATE = `<!doctype html>
   * { box-sizing: border-box; margin: 0; }
   body {
     background: var(--plane); color: var(--ink);
-    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+    font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
   }
-  main { max-width: 860px; margin: 0 auto; padding: 28px 20px 64px; }
-  header h1 { font-size: 22px; font-weight: 600; }
-  header p { color: var(--muted); font-size: 13px; margin-top: 2px; }
+  main { max-width: 1400px; margin: 0 auto; padding: 28px 24px 64px; }
+  .layout { display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: 20px; margin-top: 20px; align-items: start; }
+  .side { position: sticky; top: 16px; display: grid; gap: 12px; }
+  .content { min-width: 0; }
+  @media (max-width: 980px) {
+    .layout { grid-template-columns: minmax(0, 1fr); }
+    .side { position: static; }
+  }
+  header h1 { font-size: 26px; font-weight: 650; letter-spacing: -0.01em; }
+  header p { color: var(--muted); font-size: 14px; margin-top: 2px; }
   .card {
     background: var(--surface); border: 1px solid var(--border);
-    border-radius: 10px; padding: 16px;
+    border-radius: 12px; padding: 18px;
+    box-shadow: 0 1px 2px rgba(11,11,11,0.04);
   }
   .tiles {
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 12px; margin-top: 20px;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
   }
-  .tile .label { font-size: 12px; color: var(--ink-2); }
+  .tile { padding: 14px; }
+  .tile .label { font-size: 13px; color: var(--ink-2); }
   .tile .value { font-size: 26px; font-weight: 600; margin-top: 2px; }
-  .activity { margin-top: 12px; }
-  .activity h2 { font-size: 13px; font-weight: 500; color: var(--ink-2); }
+    .activity h2 { font-size: 14px; font-weight: 500; color: var(--ink-2); }
   .hist {
-    display: flex; align-items: flex-end; gap: 24px;
-    height: 130px; margin-top: 12px; padding: 0 4px;
+    display: flex; align-items: flex-end; gap: 8px;
+    height: 84px; margin-top: 12px; padding: 0 4px;
     border-bottom: 1px solid var(--baseline);
   }
   .hcol {
@@ -71,13 +78,13 @@ const TEMPLATE = `<!doctype html>
     background: none; border: none; padding: 0; cursor: pointer;
     font: inherit; color: inherit;
   }
-  .hcol .n { font-size: 12px; color: var(--ink-2); }
-  .hcol .bar { width: 24px; border-radius: 4px 4px 0 0; }
+  .hcol .n { font-size: 13px; color: var(--ink-2); }
+  .hcol .bar { width: 28px; border-radius: 4px 4px 0 0; }
   .hcol:hover .bar { opacity: 0.8; }
   .hcol.sel .bar { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--accent); }
-  .hlabels { display: flex; gap: 24px; padding: 6px 4px 0; }
+  .hlabels { display: flex; gap: 8px; padding: 6px 4px 0; }
   .hlabels span { flex: 1; text-align: center; font-size: 12px; color: var(--muted); }
-  .controls { display: flex; gap: 10px; align-items: center; margin: 24px 0 12px; }
+  .controls { display: flex; gap: 10px; align-items: center; margin: 20px 0 12px; }
   .controls input, .controls select {
     background: var(--surface); color: var(--ink);
     border: 1px solid var(--border); border-radius: 8px;
@@ -88,7 +95,7 @@ const TEMPLATE = `<!doctype html>
   #count { color: var(--muted); font-size: 13px; white-space: nowrap; }
   table { width: 100%; border-collapse: collapse; }
   th {
-    text-align: left; font-size: 12px; font-weight: 500; color: var(--muted);
+    text-align: left; font-size: 13px; font-weight: 500; color: var(--muted);
     padding: 4px 8px 10px;
   }
   th:last-child, td.time { text-align: right; }
@@ -98,45 +105,70 @@ const TEMPLATE = `<!doctype html>
     margin-right: 10px; vertical-align: 1px;
   }
   .wl-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-  .wl-head h2 { font-size: 15px; font-weight: 600; }
-  .wl-logo { font-size: 15px; }
-  .wl-resolved { font-size: 12px; color: var(--muted); }
+  .wl-head h2 { font-size: 18px; font-weight: 600; }
+  .wl-logo { font-size: 18px; }
+  .wl-resolved { font-size: 13px; color: var(--muted); }
   .wl-tabs { display: flex; gap: 4px; margin: 12px 0 4px; border-bottom: 1px solid var(--grid); }
   .wl-tab {
     background: none; border: none; border-bottom: 2px solid transparent;
-    padding: 7px 12px 9px; font: inherit; font-size: 14px; color: var(--ink-2);
+    padding: 8px 14px 10px; font: inherit; font-size: 15px; color: var(--ink-2);
     cursor: pointer; margin-bottom: -1px;
   }
   .wl-tab:hover { color: var(--ink); }
   .wl-tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); font-weight: 500; }
   .wl-n {
-    font-size: 11px; font-variant-numeric: tabular-nums; color: var(--muted);
+    font-size: 12px; font-variant-numeric: tabular-nums; color: var(--ink-2);
     background: var(--plane); border: 1px solid var(--border); border-radius: 20px; padding: 0 6px; margin-left: 2px;
   }
-  #wl-items li { display: flex; gap: 10px; padding: 8px 0; border-top: 1px solid var(--grid); align-items: baseline; }
-  #wl-items li:first-child { border-top: none; }
-  .wl-score {
-    flex: none; min-width: 34px; text-align: center; font-size: 12px;
-    font-variant-numeric: tabular-nums; color: var(--ink-2);
-    border: 1px solid var(--border); border-radius: 6px; padding: 1px 0;
+  #wl-items { padding: 0; }
+  @media (max-width: 600px) { #wl-items li { grid-template-columns: 48px minmax(0, 1fr) auto; gap: 10px; } }
+  #wl-items li {
+    --k: var(--muted);
+    display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; gap: 16px;
+    padding: 16px 6px; border-top: 1px solid var(--grid); align-items: start;
   }
-  .wl-body { flex: 1; min-width: 0; }
-  .wl-pitch { font-size: 14px; }
-  .wl-meta { font-size: 12px; color: var(--muted); margin-top: 1px; }
+  #wl-items li:first-child { border-top: none; }
+  #wl-items li:hover { background: var(--plane); }
+  #wl-items li.k-security { --k: #d03b3b; }
+  #wl-items li.k-bug { --k: #2a78d6; }
+  #wl-items li.k-feature { --k: #0c8a4a; }
+  #wl-items li.k-docs { --k: #a06a10; }
+  #wl-items li.k-cleanup { --k: #6b6a65; }
+  .wl-score { text-align: center; }
+  .wl-score b {
+    display: block; font-size: 22px; font-weight: 650; line-height: 1.15;
+    font-variant-numeric: tabular-nums; color: var(--ink);
+  }
+  .wl-track { display: block; height: 5px; border-radius: 3px; background: var(--grid); margin-top: 6px; overflow: hidden; }
+  .wl-fill { display: block; height: 100%; border-radius: 3px; background: var(--k); }
+  .wl-body { min-width: 0; }
+  .wl-pitch { font-size: 16px; }
+  .wl-body details summary {
+    font-size: 16px; font-weight: 550; cursor: pointer; list-style: none; line-height: 1.4;
+  }
+  .wl-body details summary::-webkit-details-marker { display: none; }
+  .wl-body details summary::after { content: '\u00A0\u25BE'; color: var(--muted); font-weight: 400; }
+  .wl-body details[open] summary::after { content: '\u00A0\u25B4'; }
+  .wl-body details p { font-size: 15px; color: var(--ink-2); margin-top: 8px; max-width: 78ch; }
+  .wl-title { font-size: 16px; font-weight: 550; line-height: 1.4; }
+  .wl-meta { font-size: 13px; color: var(--muted); margin-bottom: 6px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
   .wl-meta a { color: var(--ink-2); text-decoration: none; }
   .wl-meta a:hover { text-decoration: underline; color: var(--accent); }
-  .wl-kind {
-    display: inline-block; font-size: 11px; padding: 0 6px; border-radius: 4px;
-    background: var(--b4); color: var(--surface); margin-right: 6px;
+  .wl-chip {
+    background: var(--plane); border: 1px solid var(--border); border-radius: 20px;
+    padding: 1px 10px; font-size: 13px;
   }
-  .wl-kind.security { background: #d03b3b; color: #fff; }
-  .wl-kind.bug { background: var(--b2); color: #fff; }
+  .wl-chip b { color: var(--ink); font-weight: 600; }
+  .wl-kind {
+    display: inline-block; font-size: 12px; font-weight: 600; padding: 1px 9px; border-radius: 20px;
+    background: var(--k); color: #fff; text-transform: capitalize;
+  }
   .wl-status {
-    margin-left: 6px; font-size: 11px; padding: 0 6px; border-radius: 4px;
+    font-size: 12px; padding: 0 6px; border-radius: 4px;
     background: var(--b2); color: #fff;
   }
   .wl-done-badge {
-    flex: none; min-width: 60px; text-align: center; font-size: 11px;
+    text-align: center; font-size: 12px;
     padding: 2px 0; border-radius: 6px; color: #fff; text-transform: capitalize;
   }
   .wl-done-badge.done { background: #0ca30c; }
@@ -144,7 +176,7 @@ const TEMPLATE = `<!doctype html>
   .wl-done-badge.safe-archive { background: #0ca30c; }
   .wl-done-badge.needs-human { background: #c07a1a; }
   .wl-github {
-    margin-left: 8px; font-size: 12px; color: var(--accent);
+    font-size: 13px; color: var(--accent);
     text-decoration: none; white-space: nowrap;
   }
   .wl-github:hover { text-decoration: underline; }
@@ -158,10 +190,10 @@ const TEMPLATE = `<!doctype html>
   .wl-pinbtn.on { opacity: 1; filter: none; border-color: var(--accent); }
   .wl-pinbtn:disabled { opacity: 0.3; cursor: default; }
   .wl-later {
-    margin-left: 6px; font-size: 11px; padding: 0 6px; border-radius: 4px;
+    font-size: 12px; padding: 0 6px; border-radius: 4px;
     background: var(--plane); border: 1px solid var(--border); color: var(--muted);
   }
-  .wl-note { font-size: 13px; color: var(--ink-2); margin-top: 3px; }
+  .wl-note { font-size: 14px; color: var(--ink-2); margin-top: 3px; }
   .wl-note a { color: var(--accent); text-decoration: none; word-break: break-all; }
   .wl-note a:hover { text-decoration: underline; }
   .b0 { background: var(--b0); } .b1 { background: var(--b1); }
@@ -175,7 +207,7 @@ const TEMPLATE = `<!doctype html>
   td .sep { color: var(--muted); padding: 0 2px; }
   td a.name { color: var(--ink); font-weight: 500; text-decoration: none; }
   td a.name:hover { text-decoration: underline; color: var(--accent); }
-  td.time { color: var(--ink-2); font-size: 13px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  td.time { color: var(--ink-2); font-size: 14px; font-variant-numeric: tabular-nums; white-space: nowrap; }
   #more {
     display: block; margin: 16px auto 0; background: none;
     border: 1px solid var(--border); border-radius: 8px;
@@ -193,20 +225,24 @@ const TEMPLATE = `<!doctype html>
     <p>local mirror &middot; synced __GENERATED__</p>
   </header>
 
+  <div class="layout">
+  <aside class="side">
   <div class="tiles">
-    <div class="card tile"><div class="label">Repos</div><div class="value">__REPOS__</div><div class="sub" style="font-size:11px;color:var(--muted);margin-top:3px">__REPOS_SUB__</div></div>
+    <div class="card tile"><div class="label">Repos</div><div class="value">__REPOS__</div><div class="sub" style="font-size:12px;color:var(--muted);margin-top:3px">__REPOS_SUB__</div></div>
     <div class="card tile"><div class="label">Owners</div><div class="value">__OWNERS__</div></div>
     <div class="card tile"><div class="label">Touched this month</div><div class="value">__ACTIVE_MONTH__</div></div>
     <div class="card tile"><div class="label">Touched this year</div><div class="value">__ACTIVE_YEAR__</div></div>
   </div>
 
-  <div class="card activity" style="margin-top:12px">
+  <div class="card activity">
     <h2>Last activity <span style="color:var(--muted);font-weight:400">&middot; click a bar to filter</span></h2>
     <div class="hist" id="hist"></div>
     <div class="hlabels" id="hlabels"></div>
   </div>
+  </aside>
+  <div class="content">
 
-  <div class="card" id="worklist" hidden style="margin-top:12px">
+  <div class="card" id="worklist" hidden>
     <div class="wl-head">
       <h2>
         <span class="wl-logo">&#128038;</span> magpie
@@ -240,6 +276,9 @@ const TEMPLATE = `<!doctype html>
     </table>
     <button id="more" hidden></button>
     <noscript><p style="padding:12px">This dashboard needs JavaScript for the repo list.</p></noscript>
+  </div>
+
+  </div>
   </div>
 
   <footer>generated by gh-index.js &middot; __GENERATED__</footer>
@@ -294,7 +333,7 @@ BUCKETS.forEach(function (name, i) {
   n.textContent = counts[i].toLocaleString('en')
   var bar = document.createElement('span')
   bar.className = 'bar b' + i
-  bar.style.height = (counts[i] ? Math.max(2, Math.round(96 * counts[i] / maxCount)) : 0) + 'px'
+  bar.style.height = (counts[i] ? Math.max(2, Math.round(52 * counts[i] / maxCount)) : 0) + 'px'
   col.appendChild(n)
   col.appendChild(bar)
   col.addEventListener('click', function () {
@@ -305,6 +344,7 @@ BUCKETS.forEach(function (name, i) {
       cols[j].setAttribute('aria-pressed', String(state.bucket === j))
     }
     apply()
+    document.querySelector('.controls').scrollIntoView({ behavior: 'smooth', block: 'start' })
   })
   histEl.appendChild(col)
   var lab = document.createElement('span')
@@ -386,11 +426,12 @@ fetch('./melvincarvalho/magpie/worklist.json').then(function (r) {
   if (!wl || !wl.items || !wl.items.length) return
   var SIDECAR = location.protocol + '//' + location.hostname + ':5446'
   var canWrite = false
-  var all = [], top = []
+  var all = [], top = [], maxScore = 1
   function applyData (w) {
     document.getElementById('wl-date').textContent = (w.generated || '').slice(0, 10)
     var headline = w.headline || 12
     all = w.items
+    maxScore = Math.max.apply(null, all.map(function (x) { return x.score || 0 }).concat([1]))
     top = all.slice(0, headline)
     document.getElementById('wl-n-worklist').textContent = top.length
     document.getElementById('wl-n-all').textContent = all.length
@@ -418,41 +459,81 @@ fetch('./melvincarvalho/magpie/worklist.json').then(function (r) {
   }
 
   var ol = document.getElementById('wl-items')
+  // first clause of a finding, so the list reads as headlines
+  function headline (t) {
+    t = String(t || '')
+    if (t.length <= 110) return t
+    var re = /(: |; | \u2014 |\\. |, so )/g, m
+    while ((m = re.exec(t))) {
+      if (m.index > 110) break
+      if (m.index >= 35) return t.slice(0, m.index)
+    }
+    var cut = t.lastIndexOf(' ', 100)
+    return t.slice(0, cut > 40 ? cut : 100) + '\u2026'
+  }
   function row (it, rank) {
     var li = document.createElement('li')
-    var sc = document.createElement('span')
+    li.className = 'k-' + (it.kind || 'other')
+    var sc = document.createElement('div')
     sc.className = 'wl-score'
-    sc.textContent = it.score
-    sc.title = 'rank #' + rank + (it.confidence ? '  \\u00b7  confidence ' + it.confidence + '/5' : '')
+    sc.title = 'rank #' + rank + (it.confidence ? '  \u00b7  confidence ' + it.confidence + '/5' : '')
+    var num = document.createElement('b')
+    num.textContent = it.score
+    var track = document.createElement('span')
+    track.className = 'wl-track'
+    var fill = document.createElement('span')
+    fill.className = 'wl-fill'
+    fill.style.width = Math.max(4, Math.round(100 * it.score / maxScore)) + '%'
+    track.appendChild(fill)
+    sc.appendChild(num)
+    sc.appendChild(track)
     var body = document.createElement('div')
     body.className = 'wl-body'
-    var p = document.createElement('div')
-    p.className = 'wl-pitch'
-    if (it.priority === 'pin' && !canWrite) {
-      var pin = document.createElement('span')
-      pin.className = 'wl-pin'
-      pin.textContent = '\\uD83D\\uDCCC'
-      pin.title = 'pinned'
-      p.appendChild(pin)
-    }
-    var k = document.createElement('span')
-    k.className = 'wl-kind ' + (it.kind || '')
-    k.textContent = it.kind || ''
-    p.appendChild(k)
-    p.appendChild(document.createTextNode(it.pitch))
     var meta = document.createElement('div')
     meta.className = 'wl-meta'
+    if (it.priority === 'pin' && !canWrite) {
+      var pin = document.createElement('span')
+      pin.textContent = '\uD83D\uDCCC'
+      pin.title = 'pinned'
+      meta.appendChild(pin)
+    }
+    var k = document.createElement('span')
+    k.className = 'wl-kind'
+    k.textContent = it.kind || ''
+    meta.appendChild(k)
     var a = document.createElement('a')
+    a.className = 'wl-chip'
     a.href = './' + it.repo + '/'
-    a.textContent = it.repo
+    var parts = String(it.repo).split('/')
+    a.appendChild(document.createTextNode(parts[0] + ' / '))
+    var rn = document.createElement('b')
+    rn.textContent = parts.slice(1).join('/')
+    a.appendChild(rn)
     meta.appendChild(a)
+    var ef = document.createElement('span')
+    ef.textContent = (it.effort || '') + ' effort'
+    meta.appendChild(ef)
     var gh = document.createElement('a')
     gh.href = (it.seeAlso && it.seeAlso[1]) || ('https://github.com/' + it.repo)
-    gh.textContent = 'GitHub \\u2197'
+    gh.textContent = 'GitHub \u2197'
     gh.target = '_blank'; gh.rel = 'noopener'
     gh.className = 'wl-github'
     meta.appendChild(gh)
-    meta.appendChild(document.createTextNode('  \\u00b7  ' + (it.effort || '') + ' effort'))
+    var p
+    var head = headline(it.pitch)
+    if (head === it.pitch) {
+      p = document.createElement('div')
+      p.className = 'wl-title'
+      p.textContent = it.pitch
+    } else {
+      p = document.createElement('details')
+      var sm = document.createElement('summary')
+      sm.textContent = head
+      var full = document.createElement('p')
+      full.textContent = it.pitch
+      p.appendChild(sm)
+      p.appendChild(full)
+    }
     if (it.status && it.status !== 'open') {
       var st = document.createElement('span')
       st.className = 'wl-status'
@@ -465,8 +546,8 @@ fetch('./melvincarvalho/magpie/worklist.json').then(function (r) {
       lt.textContent = 'later'
       meta.appendChild(lt)
     }
-    body.appendChild(p)
     body.appendChild(meta)
+    body.appendChild(p)
     li.appendChild(sc)
     li.appendChild(body)
     if (canWrite) {
